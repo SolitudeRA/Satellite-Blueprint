@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  db_mysql:
+    container_name: dbservice_mysql
+    image: mysql:latest
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db_data_mysql:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/secret_db_mysql_root_password
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+
+  db_redis:
+    container_name: dbservice_redis
+    image: redis:latest
+    volumes:
+      - db_data_redis:/
+    restart: always
+
+  service_wordpress:
+    container_name: service_wordpress
+    depends_on:
+      - db_mysql
+      - db_redis
+    volumes:
+      - service_date_wordpress:/var/www/html
+    restart: always
+    environment:
+
+  service_owncloud:
+    container_name: service_owncloud
+    image: owncloud:latest
+    volumes:
+      - service_data_owncloud_apps:/var/www/html/apps
+      - service_data_owncloud_config:/var/www/html/config
+      - service_data_owncloud_data:/var/www/html/data
+    restart: always
+
+  service_jenkins:
+    container_name: service_jenkins
+    image: jenkins:latest
+
+  proxy:
+    container_name: service_proxy
+    image: nginx:latest
+    depends_on:
+      - service_wordpress
+      - service_owncloud
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - NGINX_HOST=protogalaxy.me
+
+secrets:
+  secret_db_mysql_root_password:
+    external: true
+  secret_service_wordpress_root_password:
+    external: true
+
+volumes:
+  db_data_mysql:
+  db_data_redis:
+
+networks:
+  service:
+  proxy:
