@@ -16,6 +16,8 @@ services:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+    networks:
+      - dbservice
 
   db_redis:
     container_name: dbservice_redis
@@ -23,16 +25,27 @@ services:
     volumes:
       - db_data_redis:/
     restart: always
+    networks:
+      - dbservice
 
   service_wordpress:
     container_name: service_wordpress
+    image: wordpress:latest
     depends_on:
       - db_mysql
       - db_redis
     volumes:
-      - service_date_wordpress:/var/www/html
+      - service_data_wordpress:/var/www/html
     restart: always
     environment:
+      WORDPRESS_DB_HOST: db_mysql
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+    networks:
+      - proxy
+      - service
+      - dbservice
 
   service_owncloud:
     container_name: service_owncloud
@@ -42,10 +55,18 @@ services:
       - service_data_owncloud_config:/var/www/html/config
       - service_data_owncloud_data:/var/www/html/data
     restart: always
+    networks:
+      - proxy
+      - service
+      - dbservice
 
   service_jenkins:
     container_name: service_jenkins
     image: jenkins:latest
+    networks:
+      - proxy
+      - service
+      - dbservice
 
   proxy:
     container_name: service_proxy
@@ -53,12 +74,15 @@ services:
     depends_on:
       - service_wordpress
       - service_owncloud
+      - service_jenkins
     restart: always
     ports:
       - "80:80"
       - "443:443"
     environment:
-      - NGINX_HOST=protogalaxy.me
+      NGINX_HOST: protogalaxy.me
+    networks:
+      - proxy
 
 secrets:
   secret_db_mysql_root_password:
@@ -71,5 +95,6 @@ volumes:
   db_data_redis:
 
 networks:
-  service:
   proxy:
+  service:
+  dbservice:
