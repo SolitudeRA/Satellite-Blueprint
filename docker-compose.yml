@@ -16,15 +16,29 @@ services:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - dbservice
 
   db_redis:
     container_name: dbservice_redis
-    image: redis:latest
+    image: bitnami/redis:latest
     volumes:
-      - db_data_redis:/
+      - db_data_redis:/bitnami/redis/data
     restart: always
+    environment:
+      REDIS_PASSWORD: /run/secrets/secret_db_redis_root_password
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - dbservice
 
@@ -35,13 +49,19 @@ services:
       - db_mysql
       - db_redis
     volumes:
-      - service_data_wordpress:/var/www/html
+      - service_main_wordpress:/var/www/html
     restart: always
     environment:
       WORDPRESS_DB_HOST: db_mysql
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
       - service
@@ -55,6 +75,12 @@ services:
       - service_data_owncloud_config:/var/www/html/config
       - service_data_owncloud_data:/var/www/html/data
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
       - service
@@ -63,6 +89,12 @@ services:
   service_jenkins:
     container_name: service_jenkins
     image: jenkins:latest
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "10"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
       - service
@@ -81,6 +113,12 @@ services:
       - "443:443"
     environment:
       NGINX_HOST: protogalaxy.me
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "10"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
 
@@ -92,9 +130,57 @@ secrets:
 
 volumes:
   db_data_mysql:
+    name: db_data_mysql
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/database/mysql/data
+      o: bind
+
   db_data_redis:
+    name: db_data_redis
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/database/redis/data
+      o: bind
+
+  service_main_wordpress:
+    name: service_data_wordpress
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/service/wordpress/main
+      o: bind
+
+  service_data_owncloud_apps:
+    name: service_data_owncloud_apps
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/service/owncloud/apps
+      o: bind
+
+  service_data_owncloud_config:
+    name: service_data_owncloud_config
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/service/owncloud/config
+      o: bind
+
+  service_data_owncloud_data:
+    name: service_data_owncloud_data
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/service/owncloud/data
+      o: bind
 
 networks:
   proxy:
+    name: network_proxy
   service:
+    name: network_service
   dbservice:
+    name: network_dbservice
