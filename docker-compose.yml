@@ -91,6 +91,11 @@ services:
     image: bitnami/jenkins:latest
     volumes:
       - service_data_jenkins:/bitnami/jenkins
+    restart: always
+    environment:
+      JENKINS_USERNAME: /run/secrets/secret_service_jenkins_username
+      JENKINS_PASSWORD: /run/secrets/secret_service_jenkins_password
+      JENKINS_EMAIL: /run/secrets/secret_service_jenkins_email
     logging:
       driver: "json-file"
       options:
@@ -130,6 +135,12 @@ secrets:
   secret_db_redis_root_password:
     external: true
   secret_service_wordpress_root_password:
+    external: true
+  secret_service_jenkins_username:
+    external: true
+  secret_service_jenkins_password:
+    external: true
+  secret_service_jenkins_email:
     external: true
 
 volumes:
