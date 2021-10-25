@@ -15,7 +15,7 @@ services:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/secret_db_mysql_root_password
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
-      MYSQL_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+      MYSQL_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
     logging:
       driver: "json-file"
       options:
@@ -88,7 +88,9 @@ services:
 
   service_jenkins:
     container_name: service_jenkins
-    image: jenkins:latest
+    image: bitnami/jenkins:latest
+    volumes:
+      - service_data_jenkins:/bitnami/jenkins
     logging:
       driver: "json-file"
       options:
@@ -111,8 +113,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      NGINX_HOST: protogalaxy.me
     logging:
       driver: "json-file"
       options:
@@ -124,6 +124,10 @@ services:
 
 secrets:
   secret_db_mysql_root_password:
+    external: true
+  secret_db_mysql_wordpress_password:
+    external: true
+  secret_db_redis_root_password:
     external: true
   secret_service_wordpress_root_password:
     external: true
@@ -171,6 +175,14 @@ volumes:
 
   service_data_owncloud_data:
     name: service_data_owncloud_data
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/service/owncloud/data
+      o: bind
+
+  service_data_jenkins:
+    name: service_data_jenkins
     driver: local
     driver_opts:
       type: none
