@@ -9,9 +9,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     volumes:
-      - type: bind
-        source: db_data_mysql
-        target: /var/lib/mysql
+      - db_data_mysql:/var/lib/mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/secret_db_mysql_root_password
@@ -54,10 +52,10 @@ services:
       - service_main_wordpress:/var/www/html
     restart: always
     environment:
-      WORDPRESS_DB_HOST: db_mysql
+      WORDPRESS_DB_HOST: db_mysql:3306
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: /run/secrets/secret_service_wordpress_root_password
+      WORDPRESS_DB_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
     logging:
       driver: "json-file"
       options:
@@ -71,12 +69,19 @@ services:
 
   service_owncloud:
     container_name: service_owncloud
-    image: owncloud:latest
+    image: bitnami/owncloud:latest
     volumes:
       - service_data_owncloud_apps:/var/www/html/apps
       - service_data_owncloud_config:/var/www/html/config
       - service_data_owncloud_data:/var/www/html/data
     restart: always
+    environment:
+      OWNCLOUD_USERNAME: /run/secrets/secret_service_owncloud_username
+      OWNCLOUD_PASSWORD: /run/secrets/secret_service_owncloud_password
+      OWNCLOUD_EMAIL: /run/secrets/secret_service_owncloud_email
+      OWNCLOUD_DATABASE_NAME: owncloud
+      OWNCLOUD_DATABASE_USER: owncloud
+      OWNCLOUD_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
     logging:
       driver: "json-file"
       options:
@@ -131,33 +136,39 @@ services:
 
 secrets:
   secret_db_mysql_root_password:
-    external: true
+    file: ./secrets/secret_db_mysql_root_password
   secret_db_mysql_wordpress_password:
-    external: true
+    file: ./secrets/secret_db_mysql_wordpress_password
+  secret_db_mysql_owncloud_password:
+    file: ./secrets/secret_db_mysql_owncloud_password
   secret_db_redis_root_password:
-    external: true
-  secret_service_wordpress_root_password:
-    external: true
+    file: ./secrets/secret_db_redis_root_password
+  secret_service_owncloud_username:
+    file: ./secrets/secret_service_owncloud_username
+  secret_service_owncloud_password:
+    file: ./secrets/secret_service_owncloud_password
+  secret_service_owncloud_email:
+    file: ./secrets/secret_service_owncloud_email
   secret_service_jenkins_username:
-    external: true
+    file: ./secrets/secret_service_jenkins_username
   secret_service_jenkins_password:
-    external: true
+    file: ./secrets/secret_service_jenkins_password
   secret_service_jenkins_email:
-    external: true
+    file: ./secrets/secret_service_jenkins_email
 
 volumes:
   db_data_mysql:
     driver: local
     driver_opts:
       type: none
-      device: /etc/satellite-core/database/mysql/data
+      device: /etc/satellite-core/database-service/mysql/data
       o: bind
 
   db_data_redis:
     driver: local
     driver_opts:
       type: none
-      device: /etc/satellite-core/database/redis/data
+      device: /etc/satellite-core/database-service/redis/data
       o: bind
 
   service_main_wordpress:
@@ -192,7 +203,7 @@ volumes:
     driver: local
     driver_opts:
       type: none
-      device: /etc/satellite-core/service/owncloud/data
+      device: /etc/satellite-core/service/jenkins/data
       o: bind
 
 networks:
