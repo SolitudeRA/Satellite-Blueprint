@@ -145,7 +145,6 @@ secrets:
 
 volumes:
   db_data_mysql:
-    name: db_data_mysql
     driver: local
     driver_opts:
       type: none
@@ -153,7 +152,6 @@ volumes:
       o: bind
 
   db_data_redis:
-    name: db_data_redis
     driver: local
     driver_opts:
       type: none
@@ -161,7 +159,6 @@ volumes:
       o: bind
 
   service_main_wordpress:
-    name: service_data_wordpress
     driver: local
     driver_opts:
       type: none
@@ -169,7 +166,6 @@ volumes:
       o: bind
 
   service_data_owncloud_apps:
-    name: service_data_owncloud_apps
     driver: local
     driver_opts:
       type: none
@@ -177,7 +173,6 @@ volumes:
       o: bind
 
   service_data_owncloud_config:
-    name: service_data_owncloud_config
     driver: local
     driver_opts:
       type: none
@@ -185,7 +180,6 @@ volumes:
       o: bind
 
   service_data_owncloud_data:
-    name: service_data_owncloud_data
     driver: local
     driver_opts:
       type: none
@@ -193,7 +187,6 @@ volumes:
       o: bind
 
   service_data_jenkins:
-    name: service_data_jenkins
     driver: local
     driver_opts:
       type: none
