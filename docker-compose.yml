@@ -3,19 +3,16 @@ version: "3.8"
 services:
   db_mysql:
     container_name: dbservice_mysql
-    image: mysql:latest
+    image: bitnami/mysql:latest
     command:
       - --default-authentication-plugin=mysql_native_password
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
     volumes:
-      - db_data_mysql:/var/lib/mysql
+      - db_data_mysql:/bitnami/mysql/data
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/secret_db_mysql_root_password
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
+      MYSQL_CHARACTER_SET: utf8mb4
+      MYSQL_COLLATE: utf8mb4_unicode_ci
+      MYSQL_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
     logging:
       driver: "json-file"
       options:
@@ -23,7 +20,7 @@ services:
         max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
-      - dbservice
+      - database_service
 
   db_redis:
     container_name: dbservice_redis
@@ -40,11 +37,38 @@ services:
         max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
-      - dbservice
+      - database_service
+
+  db_interface_phpmyadmin:
+    container_name: db_interface_phpmyadmin
+    image: bitnami/phpmyadmin:latest
+    environment:
+      DATABASE_HOST: db_mysql
+      DATABASE_PORT_NUMBER: 3306
+      DATABASE_ALLOW_NO_PASSWORD: no
+    networks:
+      - proxy
+      - database_service
+      - database_service_interface
+
+  security_service_vault:
+    container_name: security_service_vault
+    image: vault:latest
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "10"
+        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
+    networks:
+      - service
+      - database_service
+      - database_service_interface
 
   service_wordpress:
     container_name: service_wordpress
-    image: wordpress:latest
+    image: bitnami/wordpress
     depends_on:
       - db_mysql
       - db_redis
@@ -65,11 +89,14 @@ services:
     networks:
       - proxy
       - service
-      - dbservice
+      - database_service
 
   service_owncloud:
     container_name: service_owncloud
     image: bitnami/owncloud:latest
+    depends_on:
+      - db_mysql
+      - db_redis
     volumes:
       - service_data_owncloud_apps:/var/www/html/apps
       - service_data_owncloud_config:/var/www/html/config
@@ -91,7 +118,7 @@ services:
     networks:
       - proxy
       - service
-      - dbservice
+      - database_service
 
   service_jenkins:
     container_name: service_jenkins
@@ -112,7 +139,7 @@ services:
     networks:
       - proxy
       - service
-      - dbservice
+      - database_service
 
   proxy:
     container_name: service_proxy
@@ -158,6 +185,7 @@ secrets:
 
 volumes:
   db_data_mysql:
+    name: db_data_mysql
     driver: local
     driver_opts:
       type: none
@@ -165,6 +193,7 @@ volumes:
       o: bind
 
   db_data_redis:
+    name: db_data_redis
     driver: local
     driver_opts:
       type: none
@@ -172,6 +201,7 @@ volumes:
       o: bind
 
   service_main_wordpress:
+    name: service_main_wordpress
     driver: local
     driver_opts:
       type: none
@@ -179,6 +209,7 @@ volumes:
       o: bind
 
   service_data_owncloud_apps:
+    name: service_data_owncloud_apps
     driver: local
     driver_opts:
       type: none
@@ -186,6 +217,7 @@ volumes:
       o: bind
 
   service_data_owncloud_config:
+    name: service_data_owncloud_config
     driver: local
     driver_opts:
       type: none
@@ -193,6 +225,7 @@ volumes:
       o: bind
 
   service_data_owncloud_data:
+    name: service_data_owncloud_data
     driver: local
     driver_opts:
       type: none
@@ -200,6 +233,7 @@ volumes:
       o: bind
 
   service_data_jenkins:
+    name: service_data_jenkins
     driver: local
     driver_opts:
       type: none
@@ -209,7 +243,13 @@ volumes:
 networks:
   proxy:
     name: network_proxy
+    driver: bridge
   service:
     name: network_service
-  dbservice:
-    name: network_dbservice
+    driver: bridge
+  database_service:
+    name: network_database_service
+    driver: bridge
+  database_service_interface:
+    name: network_database_service_interface
+    driver: bridge
