@@ -1,17 +1,21 @@
-satellite-password:
-  dbservice:
-    mysql:
-      root_password:
-      wordpress_password:
-      owncloud_password:
-    redis:
-      root_password:
-  service:
-    owncloud:
-      username:
-      password:
-      email:
-    jenkins:
-      username:
-      password:
-      email:
+database:
+  mysql:
+    root_password:
+    wordpress_password:
+    owncloud_password:
+  redis:
+    root_password:
+service:
+  wordpress:
+    username:
+    password:
+    email:
+    plugins:
+  owncloud:
+    username:
+    password:
+    email:
+  jenkins:
+    username:
+    password:
+    email:
