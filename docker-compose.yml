@@ -13,7 +13,7 @@ services:
       MYSQL_CHARACTER_SET: utf8mb4
       MYSQL_COLLATE: utf8mb4_unicode_ci
       MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
-      MYSQL_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/secret_db_mysql_root_password
     logging:
       driver: "json-file"
       options:
@@ -96,6 +96,11 @@ services:
       MYSQL_CLIENT_CREATE_DATABASE_NAME: wordpress
       MYSQL_CLIENT_CREATE_DATABASE_USER: wordpress
       MYSQL_CLIENT_CREATE_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
+      WORDPRESS_DATABASE_HOST: database_mysql
+      WORDPRESS_DATABASE_PORT_NUMBER: 3306
+      WORDPRESS_DATABASE_NAME: wordpress
+      WORDPRESS_DATABASE_USER: wordpress
+      WORDPRESS_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
       PHP_POST_MAX_SIZE: 250M
       PHP_UPLOAD_MAX_FILESIZE: 250M
       WORDPRESS_USERNAME: /run/secrets/secret_service_wordpress_username
@@ -139,6 +144,12 @@ services:
       MYSQL_CLIENT_CREATE_DATABASE_NAME: owncloud
       MYSQL_CLIENT_CREATE_DATABASE_USER: owncloud
       MYSQL_CLIENT_CREATE_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
+      OWNCLOUD_DATABASE_TYPE: mysql
+      OWNCLOUD_DATABASE_HOST: database_mysql
+      OWNCLOUD_DATABASE_PORT_NUMBER: 3306
+      OWNCLOUD_DATABASE_NAME: owncloud
+      OWNCLOUD_DATABASE_USER: owncloud
+      OWNCLOUD_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
       OWNCLOUD_USERNAME: /run/secrets/secret_service_owncloud_username
       OWNCLOUD_PASSWORD: /run/secrets/secret_service_owncloud_password
       OWNCLOUD_EMAIL: /run/secrets/secret_service_owncloud_email
@@ -205,33 +216,33 @@ services:
 
 secrets:
   secret_db_mysql_root_password:
-    file: ./secrets/secret_db_mysql_root_password
+    file: ./secrets/secret_db_mysql_root_password.txt
   secret_db_mysql_wordpress_password:
-    file: ./secrets/secret_db_mysql_wordpress_password
+    file: ./secrets/secret_db_mysql_wordpress_password.txt
   secret_db_mysql_owncloud_password:
-    file: ./secrets/secret_db_mysql_owncloud_password
+    file: ./secrets/secret_db_mysql_owncloud_password.txt
   secret_db_redis_root_password:
-    file: ./secrets/secret_db_redis_root_password
+    file: ./secrets/secret_db_redis_root_password.txt
   secret_service_wordpress_username:
-    file: ./secrets/secret_service_wordpress_username
+    file: ./secrets/secret_service_wordpress_username.txt
   secret_service_wordpress_password:
-    file: ./secrets/secret_service_wordpress_password
+    file: ./secrets/secret_service_wordpress_password.txt
   secret_service_wordpress_email:
-    file: ./secrets/secret_service_wordpress_email
+    file: ./secrets/secret_service_wordpress_email.txt
   secret_service_wordpress_plugins:
-    file: ./secrets/secret_service_wordpress_plugins
+    file: ./secrets/secret_service_wordpress_plugins.txt
   secret_service_owncloud_username:
-    file: ./secrets/secret_service_owncloud_username
+    file: ./secrets/secret_service_owncloud_username.txt
   secret_service_owncloud_password:
-    file: ./secrets/secret_service_owncloud_password
+    file: ./secrets/secret_service_owncloud_password.txt
   secret_service_owncloud_email:
-    file: ./secrets/secret_service_owncloud_email
+    file: ./secrets/secret_service_owncloud_email.txt
   secret_service_jenkins_username:
-    file: ./secrets/secret_service_jenkins_username
+    file: ./secrets/secret_service_jenkins_username.txt
   secret_service_jenkins_password:
-    file: ./secrets/secret_service_jenkins_password
+    file: ./secrets/secret_service_jenkins_password.txt
   secret_service_jenkins_email:
-    file: ./secrets/secret_service_jenkins_email
+    file: ./secrets/secret_service_jenkins_email.txt
 
 volumes:
   database_data_mysql:
