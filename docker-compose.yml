@@ -4,14 +4,15 @@ services:
   database_mysql:
     container_name: database_mysql
     image: bitnami/mysql:latest
-    command:
-      - --default-authentication-plugin=mysql_native_password
     volumes:
-      - db_data_mysql:/bitnami/mysql/data
+      - database_data_mysql:/bitnami/mysql/data
     restart: always
+    secrets:
+      - secret_db_mysql_root_password
     environment:
       MYSQL_CHARACTER_SET: utf8mb4
       MYSQL_COLLATE: utf8mb4_unicode_ci
+      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
       MYSQL_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
     logging:
       driver: "json-file"
@@ -26,8 +27,10 @@ services:
     container_name: database_redis
     image: bitnami/redis:latest
     volumes:
-      - db_data_redis:/bitnami/redis/data
+      - database_data_redis:/bitnami/redis/data
     restart: always
+    secrets:
+      - secret_db_redis_root_password
     environment:
       REDIS_PASSWORD: /run/secrets/secret_db_redis_root_password
     logging:
@@ -39,9 +42,11 @@ services:
     networks:
       - database_service
 
-  db_interface_phpmyadmin:
+  database_interface_phpmyadmin:
     container_name: db_interface_phpmyadmin
     image: bitnami/phpmyadmin:latest
+    depends_on:
+      - database_mysql
     environment:
       DATABASE_HOST: database_mysql
       DATABASE_PORT_NUMBER: 3306
@@ -70,18 +75,36 @@ services:
 
   service_wordpress:
     container_name: service_wordpress
-    image: bitnami/wordpress
+    image: bitnami/wordpress:latest
     depends_on:
-      - db_mysql
-      - db_redis
+      - database_mysql
+      - database_redis
     volumes:
-      - service_main_wordpress:/var/www/html
+      - service_core_wordpress:/bitnami/wordpress
     restart: always
+    secrets:
+      - secret_db_mysql_root_password
+      - secret_db_mysql_wordpress_password
+      - secret_service_wordpress_username
+      - secret_service_wordpress_password
+      - secret_service_wordpress_email
+      - secret_service_wordpress_plugins
     environment:
-      WORDPRESS_DB_HOST: database_mysql:3306
-      WORDPRESS_DB_NAME: wordpress
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
+      MYSQL_CLIENT_FLAVOR: mysql
+      MYSQL_CLIENT_DATABASE_HOST: database_mysql
+      MYSQL_CLIENT_DATABASE_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
+      MYSQL_CLIENT_CREATE_DATABASE_NAME: wordpress
+      MYSQL_CLIENT_CREATE_DATABASE_USER: wordpress
+      MYSQL_CLIENT_CREATE_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
+      PHP_POST_MAX_SIZE: 250M
+      PHP_UPLOAD_MAX_FILESIZE: 250M
+      WORDPRESS_USERNAME: /run/secrets/secret_service_wordpress_username
+      WORDPRESS_PASSWORD: /run/secrets/secret_service_wordpress_password
+      WORDPRESS_EMAIL: /run/secrets/secret_service_wordpress_email
+      WORDPRESS_FIRST_NAME: Lee
+      WORDPRESS_LAST_NAME: Arthur
+      WORDPRESS_BLOG_NAME: Protogalaxy
+      WORDPRESS_PLUGINS: /run/secrets/secret_service_wordpress_plugins
     logging:
       driver: "json-file"
       options:
@@ -97,20 +120,28 @@ services:
     container_name: service_owncloud
     image: bitnami/owncloud:latest
     depends_on:
-      - db_mysql
-      - db_redis
+      - database_mysql
+      - database_redis
     volumes:
       - service_data_owncloud_apps:/var/www/html/apps
       - service_data_owncloud_config:/var/www/html/config
       - service_data_owncloud_data:/var/www/html/data
     restart: always
+    secrets:
+      - secret_db_mysql_owncloud_password
+      - secret_service_owncloud_username
+      - secret_service_owncloud_password
+      - secret_service_owncloud_email
     environment:
+      MYSQL_CLIENT_FLAVOR: mysql
+      MYSQL_CLIENT_DATABASE_HOST: database_mysql
+      MYSQL_CLIENT_DATABASE_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
+      MYSQL_CLIENT_CREATE_DATABASE_NAME: owncloud
+      MYSQL_CLIENT_CREATE_DATABASE_USER: owncloud
+      MYSQL_CLIENT_CREATE_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
       OWNCLOUD_USERNAME: /run/secrets/secret_service_owncloud_username
       OWNCLOUD_PASSWORD: /run/secrets/secret_service_owncloud_password
       OWNCLOUD_EMAIL: /run/secrets/secret_service_owncloud_email
-      OWNCLOUD_DATABASE_NAME: owncloud
-      OWNCLOUD_DATABASE_USER: owncloud
-      OWNCLOUD_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
     logging:
       driver: "json-file"
       options:
@@ -125,9 +156,16 @@ services:
   service_jenkins:
     container_name: service_jenkins
     image: bitnami/jenkins:latest
+    depends_on:
+      - database_mysql
+      - database_redis
     volumes:
       - service_data_jenkins:/bitnami/jenkins
     restart: always
+    secrets:
+      - secret_service_jenkins_username
+      - secret_service_jenkins_password
+      - secret_service_jenkins_email
     environment:
       JENKINS_USERNAME: /run/secrets/secret_service_jenkins_username
       JENKINS_PASSWORD: /run/secrets/secret_service_jenkins_password
@@ -144,16 +182,18 @@ services:
       - database_service
 
   proxy:
-    container_name: service_proxy
-    image: nginx:latest
+    container_name: proxy_nginx
+    image: bitnami/nginx:latest
     depends_on:
       - service_wordpress
       - service_owncloud
       - service_jenkins
+    volumes:
+      - proxy_server_blocks:/opt/bitnami/nginx/conf/server_blocks/
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:80"
+      - "8443:443"
     logging:
       driver: "json-file"
       options:
@@ -172,6 +212,14 @@ secrets:
     file: ./secrets/secret_db_mysql_owncloud_password
   secret_db_redis_root_password:
     file: ./secrets/secret_db_redis_root_password
+  secret_service_wordpress_username:
+    file: ./secrets/secret_service_wordpress_username
+  secret_service_wordpress_password:
+    file: ./secrets/secret_service_wordpress_password
+  secret_service_wordpress_email:
+    file: ./secrets/secret_service_wordpress_email
+  secret_service_wordpress_plugins:
+    file: ./secrets/secret_service_wordpress_plugins
   secret_service_owncloud_username:
     file: ./secrets/secret_service_owncloud_username
   secret_service_owncloud_password:
@@ -186,16 +234,16 @@ secrets:
     file: ./secrets/secret_service_jenkins_email
 
 volumes:
-  db_data_mysql:
-    name: db_data_mysql
+  database_data_mysql:
+    name: database_data_mysql
     driver: local
     driver_opts:
       type: none
       device: /etc/satellite-core/database-service/mysql/data
       o: bind
 
-  db_data_redis:
-    name: db_data_redis
+  database_data_redis:
+    name: database_data_redis
     driver: local
     driver_opts:
       type: none
@@ -218,12 +266,12 @@ volumes:
       device: /etc/satellite-core/vault/file
       o: bind
 
-  service_main_wordpress:
-    name: service_main_wordpress
+  service_core_wordpress:
+    name: service_core_wordpress
     driver: local
     driver_opts:
       type: none
-      device: /etc/satellite-core/service/wordpress/main
+      device: /etc/satellite-core/service/wordpress/core
       o: bind
 
   service_data_owncloud_apps:
@@ -258,6 +306,14 @@ volumes:
       device: /etc/satellite-core/service/jenkins/data
       o: bind
 
+  proxy_server_blocks:
+    name: proxy_server_blocks
+    driver: local
+    driver_opts:
+      type: none
+      device: /etc/satellite-core/proxy/server_blocks
+      o: bind
+
 networks:
   proxy:
     name: network_proxy
@@ -266,5 +322,5 @@ networks:
     name: network_service
     driver: bridge
   database_service:
-    name: network_database_service
+    name: network_database
     driver: bridge

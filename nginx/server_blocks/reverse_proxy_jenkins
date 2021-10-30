@@ -1,0 +1,28 @@
+server{
+        listen 80;
+        listen [::]:80;
+
+        server_name ci.protogalaxy.me;
+
+        return 301 https://ci.protogalaxy.me$request_uri;
+}
+
+server {
+        listen 443 ssl;
+        listen [::]:443 ssl;
+
+        server_name ci.protogalaxy.me;
+        access_log /opt/bitnami/nginx/logs/jenkins_access.log;
+        error_log /opt/bitnami/nginx/logs/jenkins_error.log;
+
+        charset utf-8;
+
+        location / {
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header HOST $http_host;
+            proxy_set_header X-NginX-Proxy true;
+
+            proxy_pass http://service_jenkins:8443;
+            proxy_redirect off;
+        }
+}
