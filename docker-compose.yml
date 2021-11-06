@@ -3,113 +3,76 @@ version: "3.8"
 services:
   database_mysql:
     container_name: database_mysql
-    image: bitnami/mysql:latest
+    image: mysql:latest
     volumes:
-      - database_data_mysql:/bitnami/mysql/data
+      - database_data_mysql:/var/lib/mysql
+      - /etc/satellite-core/database/mysql/data:/var/lib/mysql
+      - database_config_mysql:/etc/mysql/conf.d
+      - ${PWD}/blueprint/database/mysql/config:/etc/mysql/conf.d
+      - database_init_mysql:/docker-entrypoint-initdb.d
+      - ${PWD}/blueprint/database/mysql/init:/docker-entrypoint-initdb.d
     restart: always
-    secrets:
-      - secret_db_mysql_root_password
+    ports:
+      - "3306:3306"
     environment:
-      MYSQL_CHARACTER_SET: utf8mb4
-      MYSQL_COLLATE: utf8mb4_unicode_ci
-      MYSQL_AUTHENTICATION_PLUGIN: mysql_native_password
-      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/secret_db_mysql_root_password
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
+      MYSQL_ROOT_PASSWORD: test123456
     networks:
-      - database_service
+      - security
+      - database
 
   database_redis:
     container_name: database_redis
-    image: bitnami/redis:latest
+    image: redis:latest
     volumes:
-      - database_data_redis:/bitnami/redis/data
+      - database_data_redis:/data
+      - /etc/satellite-core/database/redis/data:/data
     restart: always
-    secrets:
-      - secret_db_redis_root_password
-    environment:
-      REDIS_PASSWORD: /run/secrets/secret_db_redis_root_password
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "5"
-        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
-      - database_service
+      - security
+      - database
 
-  database_interface_phpmyadmin:
-    container_name: db_interface_phpmyadmin
-    image: bitnami/phpmyadmin:latest
-    depends_on:
-      - database_mysql
-    environment:
-      DATABASE_HOST: database_mysql
-      DATABASE_PORT_NUMBER: 3306
-      DATABASE_ALLOW_NO_PASSWORD: no
-    networks:
-      - proxy
-      - database_service
-
-  security_service_vault:
-    container_name: security_service_vault
-    image: vault:latest
-    volumes:
-      - vault_logs:/vault/logs
-      - vault_file:/vault/file
-    restart: always
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "20m"
-        max-file: "10"
-        tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
-    networks:
-      - proxy
-      - service
-      - database_service
+  #security_consul:
+  #  container_name: security_consul
+  #  image: consul:latest
+  #  volumes:
+  #    - security_consul_config:/consul/config
+  #    - ${PWD}/blueprint/security/consul/config:/consul/config
+  #    - security_consul_data:/consul/data
+  #    - /etc/satellite-core/security/consul/data:/consul/data
+  #  restart: always
+  #  networks:
+  #    - security
+#
+  #security_vault:
+  #  container_name: security_vault
+  #  image: vault:latest
+  #  volumes:
+  #    - security_vault_config:/vault/config
+  #    - ${PWD}/blueprint/security/vault/config:/vault/config
+  #    - security_vault_logs:/vault/logs
+  #    - /etc/satellite-core/security/vault/logs:/vault/logs
+  #    - security_vault_file:/vault/file
+  #    - /etc/satellite-core/security/vault/file:/vault/file
+  #  restart: always
+  #  networks:
+  #    - proxy
+  #    - security
 
   service_wordpress:
     container_name: service_wordpress
-    image: bitnami/wordpress:latest
+    image: wordpress:latest
     depends_on:
       - database_mysql
       - database_redis
     volumes:
-      - service_core_wordpress:/bitnami/wordpress
+      - service_core_wordpress:/var/www/html
+      - /etc/satellite-core/service/wordpress/core:/var/www/html
     restart: always
-    secrets:
-      - secret_db_mysql_root_password
-      - secret_db_mysql_wordpress_password
-      - secret_service_wordpress_username
-      - secret_service_wordpress_password
-      - secret_service_wordpress_email
-      - secret_service_wordpress_plugins
     environment:
-      MYSQL_CLIENT_FLAVOR: mysql
-      MYSQL_CLIENT_DATABASE_HOST: database_mysql
-      MYSQL_CLIENT_DATABASE_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
-      MYSQL_CLIENT_CREATE_DATABASE_NAME: wordpress
-      MYSQL_CLIENT_CREATE_DATABASE_USER: wordpress
-      MYSQL_CLIENT_CREATE_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
-      WORDPRESS_DATABASE_HOST: database_mysql
-      WORDPRESS_DATABASE_PORT_NUMBER: 3306
-      WORDPRESS_DATABASE_NAME: wordpress
-      WORDPRESS_DATABASE_USER: wordpress
-      WORDPRESS_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_wordpress_password
-      PHP_POST_MAX_SIZE: 250M
-      PHP_UPLOAD_MAX_FILESIZE: 250M
-      WORDPRESS_USERNAME: /run/secrets/secret_service_wordpress_username
-      WORDPRESS_PASSWORD: /run/secrets/secret_service_wordpress_password
-      WORDPRESS_EMAIL: /run/secrets/secret_service_wordpress_email
-      WORDPRESS_FIRST_NAME: Lee
-      WORDPRESS_LAST_NAME: Arthur
-      WORDPRESS_BLOG_NAME: Protogalaxy
-      WORDPRESS_PLUGINS: /run/secrets/secret_service_wordpress_plugins
+      WORDPRESS_DB_HOST: database_mysql
+      WORDPRESS_DB_NAME: WORDPRESS_DB_NAME
+      WORDPRESS_DB_USER: WORDPRESS_DB_USER
+      WORDPRESS_DB_PASSWORD: WORDPRESS_DB_PASSWORD
     logging:
       driver: "json-file"
       options:
@@ -119,40 +82,25 @@ services:
     networks:
       - proxy
       - service
-      - database_service
+      - security
+      - database
 
-  service_owncloud:
-    container_name: service_owncloud
-    image: bitnami/owncloud:latest
+  service_nextcloud:
+    container_name: service_nextcloud
+    image: nextcloud:latest
     depends_on:
       - database_mysql
       - database_redis
     volumes:
-      - service_data_owncloud_apps:/var/www/html/apps
-      - service_data_owncloud_config:/var/www/html/config
-      - service_data_owncloud_data:/var/www/html/data
+      - service_core_nextcloud:/var/www/html
+      - /etc/satellite-core/service/nextcloud/core:/var/www/html
     restart: always
-    secrets:
-      - secret_db_mysql_owncloud_password
-      - secret_service_owncloud_username
-      - secret_service_owncloud_password
-      - secret_service_owncloud_email
     environment:
-      MYSQL_CLIENT_FLAVOR: mysql
-      MYSQL_CLIENT_DATABASE_HOST: database_mysql
-      MYSQL_CLIENT_DATABASE_ROOT_PASSWORD: /run/secrets/secret_db_mysql_root_password
-      MYSQL_CLIENT_CREATE_DATABASE_NAME: owncloud
-      MYSQL_CLIENT_CREATE_DATABASE_USER: owncloud
-      MYSQL_CLIENT_CREATE_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
-      OWNCLOUD_DATABASE_TYPE: mysql
-      OWNCLOUD_DATABASE_HOST: database_mysql
-      OWNCLOUD_DATABASE_PORT_NUMBER: 3306
-      OWNCLOUD_DATABASE_NAME: owncloud
-      OWNCLOUD_DATABASE_USER: owncloud
-      OWNCLOUD_DATABASE_PASSWORD: /run/secrets/secret_db_mysql_owncloud_password
-      OWNCLOUD_USERNAME: /run/secrets/secret_service_owncloud_username
-      OWNCLOUD_PASSWORD: /run/secrets/secret_service_owncloud_password
-      OWNCLOUD_EMAIL: /run/secrets/secret_service_owncloud_email
+      MYSQL_HOST: database_mysql
+      MYSQL_DATABASE: MYSQL_DATABASE
+      MYSQL_USER: MYSQL_USER
+      MYSQL_PASSWORD: MYSQL_PASSWORD
+      REDIS_HOST: database_redis
     logging:
       driver: "json-file"
       options:
@@ -162,176 +110,99 @@ services:
     networks:
       - proxy
       - service
-      - database_service
+      - security
+      - database
 
   service_jenkins:
     container_name: service_jenkins
-    image: bitnami/jenkins:latest
-    depends_on:
-      - database_mysql
-      - database_redis
+    image: jenkins/jenkins:jdk11
     volumes:
-      - service_data_jenkins:/bitnami/jenkins
+      - service_core_jenkins:/var/jenkins_home
     restart: always
-    secrets:
-      - secret_service_jenkins_username
-      - secret_service_jenkins_password
-      - secret_service_jenkins_email
-    environment:
-      JENKINS_USERNAME: /run/secrets/secret_service_jenkins_username
-      JENKINS_PASSWORD: /run/secrets/secret_service_jenkins_password
-      JENKINS_EMAIL: /run/secrets/secret_service_jenkins_email
     logging:
       driver: "json-file"
       options:
-        max-size: "20m"
-        max-file: "10"
+        max-size: "10m"
+        max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
       - service
-      - database_service
+      - security
 
-  proxy:
+  proxy_nginx:
     container_name: proxy_nginx
     image: bitnami/nginx:latest
     depends_on:
       - service_wordpress
-      - service_owncloud
-      - service_jenkins
     volumes:
-      - proxy_server_blocks:/opt/bitnami/nginx/conf/server_blocks/
+      #- /etc/core/proxy/nginx/config/nginx.conf:/opt/bitnami/nginx/conf/nginx.conf:ro
+      - proxy_nginx_server_blocks:/opt/bitnami/nginx/conf/server_blocks
+      - ${PWD}/blueprint/proxy/nginx/server_blocks:/opt/bitnami/nginx/conf/server_blocks
     restart: always
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "80:80"
+      - "443:443"
     logging:
       driver: "json-file"
       options:
-        max-size: "20m"
-        max-file: "10"
+        max-size: "10m"
+        max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
-
-secrets:
-  secret_db_mysql_root_password:
-    file: ./secrets/secret_db_mysql_root_password.txt
-  secret_db_mysql_wordpress_password:
-    file: ./secrets/secret_db_mysql_wordpress_password.txt
-  secret_db_mysql_owncloud_password:
-    file: ./secrets/secret_db_mysql_owncloud_password.txt
-  secret_db_redis_root_password:
-    file: ./secrets/secret_db_redis_root_password.txt
-  secret_service_wordpress_username:
-    file: ./secrets/secret_service_wordpress_username.txt
-  secret_service_wordpress_password:
-    file: ./secrets/secret_service_wordpress_password.txt
-  secret_service_wordpress_email:
-    file: ./secrets/secret_service_wordpress_email.txt
-  secret_service_wordpress_plugins:
-    file: ./secrets/secret_service_wordpress_plugins.txt
-  secret_service_owncloud_username:
-    file: ./secrets/secret_service_owncloud_username.txt
-  secret_service_owncloud_password:
-    file: ./secrets/secret_service_owncloud_password.txt
-  secret_service_owncloud_email:
-    file: ./secrets/secret_service_owncloud_email.txt
-  secret_service_jenkins_username:
-    file: ./secrets/secret_service_jenkins_username.txt
-  secret_service_jenkins_password:
-    file: ./secrets/secret_service_jenkins_password.txt
-  secret_service_jenkins_email:
-    file: ./secrets/secret_service_jenkins_email.txt
 
 volumes:
   database_data_mysql:
     name: database_data_mysql
     driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/database-service/mysql/data
-      o: bind
+
+  database_config_mysql:
+    name: database_data_mysql
+    driver: local
+
+  database_init_mysql:
+    name: database_data_mysql
+    driver: local
 
   database_data_redis:
-    name: database_data_redis
+    name: database_data_mysql
     driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/database-service/redis/data
-      o: bind
 
-  vault_logs:
-    name: vault_logs
-    driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/vault/logs
-      o: bind
-
-  vault_file:
-    name: vault_file
-    driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/vault/file
-      o: bind
+ # security_vault_config:
+ #   name: security_vault_config
+ #   driver: local
+#
+ # security_vault_logs:
+ #   name: security_vault_logs
+ #   driver: local
+#
+ # security_vault_file:
+ #   name: security_vault_file
+ #   driver: local
 
   service_core_wordpress:
     name: service_core_wordpress
     driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/service/wordpress/core
-      o: bind
 
-  service_data_owncloud_apps:
-    name: service_data_owncloud_apps
+  service_core_nextcloud:
+    name: service_core_nextcloud
     driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/service/owncloud/apps
-      o: bind
 
-  service_data_owncloud_config:
-    name: service_data_owncloud_config
+  service_core_jenkins:
+    name: service_core_jenkins
     driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/service/owncloud/config
-      o: bind
 
-  service_data_owncloud_data:
-    name: service_data_owncloud_data
+  proxy_nginx_server_blocks:
+    name: proxy_nginx_server_blocks
     driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/service/owncloud/data
-      o: bind
-
-  service_data_jenkins:
-    name: service_data_jenkins
-    driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/service/jenkins/data
-      o: bind
-
-  proxy_server_blocks:
-    name: proxy_server_blocks
-    driver: local
-    driver_opts:
-      type: none
-      device: /etc/satellite-core/proxy/server_blocks
-      o: bind
 
 networks:
-  proxy:
-    name: network_proxy
+  database:
+    driver: bridge
+  security:
     driver: bridge
   service:
-    name: network_service
     driver: bridge
-  database_service:
-    name: network_database
+  proxy:
     driver: bridge
