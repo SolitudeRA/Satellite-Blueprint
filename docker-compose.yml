@@ -4,6 +4,16 @@ services:
   database_mysql:
     container_name: database_mysql
     image: mysql:latest
+    cap_add:
+      - SYS_NICE
+    secrets:
+      - database_mysql_root_password
+      - database_mysql_wordpress_database
+      - database_mysql_wordpress_user
+      - database_mysql_wordpress_password
+      - database_mysql_nextcloud_database
+      - database_mysql_nextcloud_user
+      - database_mysql_nextcloud_password
     volumes:
       - database_data_mysql:/var/lib/mysql
       - /etc/satellite-core/database/mysql/data:/var/lib/mysql
@@ -15,7 +25,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: test123456
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/database_mysql_root_password
     networks:
       - security
       - database
@@ -64,15 +74,19 @@ services:
     depends_on:
       - database_mysql
       - database_redis
+    secrets:
+      - database_mysql_wordpress_database
+      - database_mysql_wordpress_user
+      - database_mysql_wordpress_password
     volumes:
       - service_core_wordpress:/var/www/html
       - /etc/satellite-core/service/wordpress/core:/var/www/html
     restart: always
     environment:
       WORDPRESS_DB_HOST: database_mysql
-      WORDPRESS_DB_NAME: WORDPRESS_DB_NAME
-      WORDPRESS_DB_USER: WORDPRESS_DB_USER
-      WORDPRESS_DB_PASSWORD: WORDPRESS_DB_PASSWORD
+      WORDPRESS_DB_NAME_FILE: /run/secrets/database_mysql_wordpress_database
+      WORDPRESS_DB_USER_FILE: /run/secrets/database_mysql_wordpress_user
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/database_mysql_wordpress_password
     logging:
       driver: "json-file"
       options:
@@ -91,16 +105,23 @@ services:
     depends_on:
       - database_mysql
       - database_redis
+    secrets:
+      - database_mysql_nextcloud_database
+      - database_mysql_nextcloud_user
+      - database_mysql_nextcloud_password
+      - service_nextcloud_username
+      - service_nextcloud_password
     volumes:
       - service_core_nextcloud:/var/www/html
       - /etc/satellite-core/service/nextcloud/core:/var/www/html
     restart: always
     environment:
       MYSQL_HOST: database_mysql
-      MYSQL_DATABASE: MYSQL_DATABASE
-      MYSQL_USER: MYSQL_USER
-      MYSQL_PASSWORD: MYSQL_PASSWORD
-      REDIS_HOST: database_redis
+      MYSQL_DATABASE_FILE: /run/secrets/database_mysql_nextcloud_database
+      MYSQL_USER_FILE: /run/secrets/database_mysql_nextcloud_user
+      MYSQL_PASSWORD_FILE: /run/secrets/database_mysql_nextcloud_password
+      NEXTCLOUD_ADMIN_USER_FILE: /run/secrets/service_nextcloud_username
+      NEXTCLOUD_ADMIN_PASSWORD_FILE: /run/secrets/service_nextcloud_password
     logging:
       driver: "json-file"
       options:
@@ -151,6 +172,26 @@ services:
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
     networks:
       - proxy
+
+secrets:
+  database_mysql_root_password:
+    file: ./secrets/database_mysql_root_password
+  database_mysql_wordpress_database:
+    file: ./secrets/database_mysql_wordpress_database
+  database_mysql_wordpress_user:
+    file: ./secrets/database_mysql_wordpress_user
+  database_mysql_wordpress_password:
+    file: ./secrets/database_mysql_wordpress_password
+  database_mysql_nextcloud_database:
+    file: ./secrets/database_mysql_nextcloud_database
+  database_mysql_nextcloud_user:
+    file: ./secrets/database_mysql_nextcloud_user
+  database_mysql_nextcloud_password:
+    file: ./secrets/database_mysql_nextcloud_password
+  service_nextcloud_username:
+    file: ./secrets/service_nextcloud_username
+  service_nextcloud_password:
+    file: ./secrets/service_nextcloud_password
 
 volumes:
   database_data_mysql:
