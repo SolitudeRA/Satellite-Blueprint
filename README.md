@@ -1,14 +1,16 @@
 # Satellite Blueprint
 
----
-
 > Satellite Blueprint is a docker compose project for private server maintained by SolitudeRA.
 
 [![Author](https://img.shields.io/badge/Author-SolitudeRA-ff69b4.svg?style=flat-square&logo=github)](https://www.protogalaxy.me)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square&logo=opensourceinitiative)](https://choosealicense.com/licenses/mit/)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange.svg?style=flat-square&logo=jenkins)
 
+---
+
 ## Quick Start
+
+###Clone project from GitHub 
 
 To deploy Satellite Blueprint, you may first clone this project from GitHub to your own server by running this command.
 
@@ -16,58 +18,40 @@ To deploy Satellite Blueprint, you may first clone this project from GitHub to y
 git clone https://github.com/SolitudeRA/Satellite-blueprint.git
 ```
 
-After cloning and before deploying the project, you should first ***modify sensitive config*** of the docker compose
-file and database initializing files. Here is the table of configurable parameters in this project.
+After cloning and before deploying the project, you should first ***install Pre-Depends*** and ***modify sensitive
+config*** of the docker compose file and database initializing files.
 
-### Compose file
+###Install Pre-Depends
 
-> docker-compose.yml
+Here is the command to install Pre-Depends of the project.
 
-#### MySQL
+```
+sudo apt-get install jq
+```
 
-* MYSQL_ROOT_PASSWORD
+###Modify sensitive config
 
-#### WordPress
+After installing Pre-Depends, you can modify sensitive config in ***config.json*** 
 
-* WORDPRESS_DB_NAME
-* WORDPRESS_DB_USER
-* WORDPRESS_DB_PASSWORD
+###Deploy sensitive config
 
-#### NextCloud
+You can deploy sensitive config by running this script.
 
-* MYSQL_DATABASE
-* MYSQL_USER
-* MYSQL_PASSWORD
+```
+/scripts/deploy/deploy_config.sh
+```
 
-### Database initializing files
+###Modify proxy config
 
-> /blueprint/database/mysql/init/
+You should modify nginx server blocks of the services to make the 
 
-#### WordPress
+```
+/blueprint/proxy/nginx/server_blocks
+```
 
-* DATABASE
-* USER
-* PASSWORD
+###Deploy the project
 
-#### NextCloud
-
-* DATABASE
-* USER
-* PASSWORD
-
-### Database config files
-
-> /blueprint/database/mysql/config/
-
-### Nginx server blocks
-
-> /blueprint/proxy/nginx/server_blocks/
-
-* wordpress.conf
-* nextcloud.conf
-* jenkins.conf
-
-After modifying these configs, you could run this command in project directory to deploy the project.
+You could run this command in project directory to deploy the project.
 
 ```
 docker-compose up -d
@@ -76,3 +60,5 @@ docker-compose up -d
 ## User Guide
 
 ### Architecture
+
+![Server Architecture](README/Server.png "Server Architecture")

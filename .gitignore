@@ -5,5 +5,4 @@ out
 gen
 
 #Project files
-core/database/mysql/data
-core/service
+/secrets
