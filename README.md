@@ -5,7 +5,7 @@
 > Satellite Blueprint is a docker compose project for private server maintained by SolitudeRA.
 
 [![Author](https://img.shields.io/badge/Author-SolitudeRA-ff69b4.svg?style=flat-square&logo=github)](https://www.protogalaxy.me)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square&logo=opensourceinitiative)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square&logo=opensourceinitiative)](https://choosealicense.com/licenses/mit/)
 ![Status](https://img.shields.io/badge/Status-Alpha-orange.svg?style=flat-square&logo=jenkins)
 
 ## Quick Start
