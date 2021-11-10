@@ -1,18 +1,24 @@
 database:
   mysql:
-    root_password:
-    wordpress_database:
-    wordpress_user:
-    wordpress_password:
-    nextcloud_database:
-    nextcloud_user:
-    nextcloud_password:
+    root:
+      password:
+    wordpress:
+      database:
+      user:
+      password:
+    nextcloud:
+      database:
+      user:
+      password:
   redis:
-    root_password:
+    root:
+      password:
 service:
   wordpress:
     server_name:
   nextcloud:
+    username:
+    password:
     server_name:
   jenkins:
     server_name:
