@@ -25,7 +25,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/database_mysql_root_password
     networks:
-      - security
       - database
 
   database_redis:
@@ -42,35 +41,36 @@ services:
       REDIS_ROOT_PASSWORD_FILE: /run/secrets/database_redis_root_password
     restart: always
     networks:
-      - security
       - database
 
-  #security_consul:
-  #  container_name: security_consul
-  #  image: consul:latest
-  #  volumes:
-  #    - security_consul_config:/consul/config
-  #    - ${PWD}/blueprint/security/consul/config:/consul/config
-  #    - security_consul_data:/consul/data
-  #    - /etc/satellite-core/security/consul/data:/consul/data
-  #  restart: always
-  #  networks:
-  #    - security
-  #
-  #security_vault:
-  #  container_name: security_vault
-  #  image: vault:latest
-  #  volumes:
-  #    - security_vault_config:/vault/config
-  #    - ${PWD}/blueprint/security/vault/config:/vault/config
-  #    - security_vault_logs:/vault/logs
-  #    - /etc/satellite-core/security/vault/logs:/vault/logs
-  #    - security_vault_file:/vault/file
-  #    - /etc/satellite-core/security/vault/file:/vault/file
-  #  restart: always
-  #  networks:
-  #    - proxy
-  #    - security
+  security_consul:
+    container_name: security_consul
+    image: consul:latest
+    volumes:
+      - security_consul_config:/consul/config
+      - ${PWD}/blueprint/security/consul/config:/consul/config
+      - security_consul_data:/consul/data
+      - /etc/satellite-core/security/consul/data:/consul/data
+    restart: always
+    networks:
+      - security
+
+  security_vault:
+    container_name: security_vault
+    image: vault:latest
+    volumes:
+      - security_vault_config:/vault/config
+      - ${PWD}/blueprint/security/vault/config:/vault/config
+      - security_vault_logs:/vault/logs
+      - /etc/satellite-core/security/vault/logs:/vault/logs
+      - security_vault_file:/vault/file
+      - /etc/satellite-core/security/vault/file:/vault/file
+    restart: always
+    networks:
+      - proxy
+      - service
+      - database
+      - security
 
   service_wordpress:
     container_name: service_wordpress
@@ -100,7 +100,6 @@ services:
     networks:
       - proxy
       - service
-      - security
       - database
 
   service_nextcloud:
@@ -138,7 +137,6 @@ services:
     networks:
       - proxy
       - service
-      - security
       - database
 
   service_jenkins:
@@ -156,7 +154,6 @@ services:
     networks:
       - proxy
       - service
-      - security
 
   proxy_nginx:
     container_name: proxy_nginx
@@ -219,17 +216,17 @@ volumes:
     name: database_data_mysql
     driver: local
 
-  # security_vault_config:
-  #   name: security_vault_config
-  #   driver: local
-  #
-  # security_vault_logs:
-  #   name: security_vault_logs
-  #   driver: local
-  #
-  # security_vault_file:
-  #   name: security_vault_file
-  #   driver: local
+  security_vault_config:
+    name: security_vault_config
+    driver: local
+
+  security_vault_logs:
+    name: security_vault_logs
+    driver: local
+
+  security_vault_file:
+    name: security_vault_file
+    driver: local
 
   service_core_wordpress:
     name: service_core_wordpress
