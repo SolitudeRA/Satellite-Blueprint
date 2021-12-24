@@ -15,42 +15,61 @@ services:
       - database_mysql_nextcloud_user
       - database_mysql_nextcloud_password
     volumes:
-      - database_data_mysql:/var/lib/mysql
+      - database_mysql_data:/var/lib/mysql
       - /etc/satellite-core/database/mysql/data:/var/lib/mysql
-      - database_config_mysql:/etc/mysql/conf.d
+      - database_mysql_config:/etc/mysql/conf.d
       - ${PWD}/blueprint/database/mysql/config:/etc/mysql/conf.d
-      - database_init_mysql:/docker-entrypoint-initdb.d
+      - database_mysql_init:/docker-entrypoint-initdb.d
       - ${PWD}/blueprint/database/mysql/init:/docker-entrypoint-initdb.d
-    restart: always
     environment:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/database_mysql_root_password
+    restart: always
     networks:
       - database
 
   database_redis:
     container_name: database_redis
-    build:
-      context: ./blueprint/database/redis
-      dockerfile: Dockerfile-Redis
-    secrets:
-      - database_redis_root_password
+    image: redis:latest
     volumes:
-      - database_data_redis:/data
+      - database_redis_data:/data
       - /etc/satellite-core/database/redis/data:/data
-    environment:
-      REDIS_ROOT_PASSWORD_FILE: /run/secrets/database_redis_root_password
     restart: always
     networks:
       - database
 
-  security_consul:
-    container_name: security_consul
-    image: consul:latest
+  database_adminer:
+    container_name: database_adminer
+    image: adminer:latest
+    environment:
+      ADMINER_DESIGN: "dracula"
+    restart: always
+    networks:
+      - database
+      - proxy
+
+  security_postgresql:
+    container_name: security_postgresql
+    image: postgres:latest
+    command:
+      - "postgres"
+      - "-c"
+      - "ssl=off"
+    secrets:
+      - security_postgresql_root_user
+      - security_postgresql_root_password
     volumes:
-      - security_consul_config:/consul/config
-      - ${PWD}/blueprint/security/consul/config:/consul/config
-      - security_consul_data:/consul/data
-      - /etc/satellite-core/security/consul/data:/consul/data
+      - security_postgresql_data:/var/lib/postgresql/data
+      - /etc/satellite-core/security/postgresql/data:/var/lib/postgresql/data
+      - security_postgresql_cert:/var/lib/postgresql/cert
+      - ${PWD}/blueprint/security/postgresql/cert:/var/lib/postgresql/cert
+      - security_postgresql_init:/docker-entrypoint-initdb.d
+      - ${PWD}/blueprint/security/postgresql/init:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/security_postgresql_root_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/security_postgresql_root_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: "vault"
+      PGDATA: /var/lib/postgresql/data/pgdata
     restart: always
     networks:
       - security
@@ -58,19 +77,31 @@ services:
   security_vault:
     container_name: security_vault
     image: vault:latest
+    command:
+      - "vault"
+      - "server"
+      - "-config"
+      - "/vault/config/vault_config.hcl"
+    depends_on:
+      - security_postgresql
+    cap_add:
+      - IPC_LOCK
+    secrets:
+      - security_postgresql_root_user
+      - security_postgresql_root_password
     volumes:
       - security_vault_config:/vault/config
       - ${PWD}/blueprint/security/vault/config:/vault/config
       - security_vault_logs:/vault/logs
       - /etc/satellite-core/security/vault/logs:/vault/logs
-      - security_vault_file:/vault/file
-      - /etc/satellite-core/security/vault/file:/vault/file
+    environment:
+      VAULT_ADDR: "http://0.0.0.0:8200"
     restart: always
     networks:
-      - proxy
-      - service
-      - database
       - security
+      - database
+      - service
+      - proxy
 
   service_wordpress:
     container_name: service_wordpress
@@ -83,9 +114,8 @@ services:
       - database_mysql_wordpress_user
       - database_mysql_wordpress_password
     volumes:
-      - service_core_wordpress:/var/www/html
+      - service_wordpress_core:/var/www/html
       - /etc/satellite-core/service/wordpress/core:/var/www/html
-    restart: always
     environment:
       WORDPRESS_DB_HOST: database_mysql
       WORDPRESS_DB_NAME_FILE: /run/secrets/database_mysql_wordpress_database
@@ -97,6 +127,7 @@ services:
         max-size: "10m"
         max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
+    restart: always
     networks:
       - proxy
       - service
@@ -112,13 +143,11 @@ services:
       - database_mysql_nextcloud_database
       - database_mysql_nextcloud_user
       - database_mysql_nextcloud_password
-      - database_redis_root_password
       - service_nextcloud_username
       - service_nextcloud_password
     volumes:
-      - service_core_nextcloud:/var/www/html
+      - service_nextcloud_core:/var/www/html
       - /etc/satellite-core/service/nextcloud/core:/var/www/html
-    restart: always
     environment:
       MYSQL_HOST: database_mysql
       MYSQL_DATABASE_FILE: /run/secrets/database_mysql_nextcloud_database
@@ -126,14 +155,13 @@ services:
       MYSQL_PASSWORD_FILE: /run/secrets/database_mysql_nextcloud_password
       NEXTCLOUD_ADMIN_USER_FILE: /run/secrets/service_nextcloud_username
       NEXTCLOUD_ADMIN_PASSWORD_FILE: /run/secrets/service_nextcloud_password
-      REDIS_HOST: database_redis
-      REDIS_HOST_PASSWORD_FILE: /run/secrets/database_redis_root_password
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
+    restart: always
     networks:
       - proxy
       - service
@@ -143,14 +171,14 @@ services:
     container_name: service_jenkins
     image: jenkins/jenkins:jdk11
     volumes:
-      - service_core_jenkins:/var/jenkins_home
-    restart: always
+      - service_jenkins_core:/var/jenkins_home
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
+    restart: always
     networks:
       - proxy
       - service
@@ -164,7 +192,6 @@ services:
       #- /etc/core/proxy/nginx/config/nginx.conf:/opt/bitnami/nginx/conf/nginx.conf:ro
       - proxy_nginx_server_blocks:/opt/bitnami/nginx/conf/server_blocks
       - ${PWD}/blueprint/proxy/nginx/server_blocks:/opt/bitnami/nginx/conf/server_blocks
-    restart: always
     ports:
       - "80:80"
       - "443:443"
@@ -174,10 +201,15 @@ services:
         max-size: "10m"
         max-file: "5"
         tag: "{{.Name}}_{{.ImageName}}_{{.ID}}"
+    restart: always
     networks:
       - proxy
 
 secrets:
+  security_postgresql_root_user:
+    file: ./secrets/security_postgresql_root_user
+  security_postgresql_root_password:
+    file: ./secrets/security_postgresql_root_password
   database_mysql_root_password:
     file: ./secrets/database_mysql_root_password
   database_mysql_wordpress_database:
@@ -192,28 +224,38 @@ secrets:
     file: ./secrets/database_mysql_nextcloud_user
   database_mysql_nextcloud_password:
     file: ./secrets/database_mysql_nextcloud_password
-  database_redis_root_password:
-    file: ./secrets/database_redis_root_password
   service_nextcloud_username:
     file: ./secrets/service_nextcloud_username
   service_nextcloud_password:
     file: ./secrets/service_nextcloud_password
 
 volumes:
-  database_data_mysql:
-    name: database_data_mysql
+  database_mysql_data:
+    name: database_mysql_data
     driver: local
 
-  database_config_mysql:
-    name: database_data_mysql
+  database_mysql_config:
+    name: database_mysql_config
     driver: local
 
-  database_init_mysql:
-    name: database_data_mysql
+  database_mysql_init:
+    name: database_mysql_init
     driver: local
 
-  database_data_redis:
-    name: database_data_mysql
+  database_redis_data:
+    name: database_redis_data
+    driver: local
+
+  security_postgresql_data:
+    name: security_postgresql_data
+    driver: local
+
+  security_postgresql_cert:
+    name: security_postgresql_cert
+    driver: local
+
+  security_postgresql_init:
+    name: security_postgresql_init
     driver: local
 
   security_vault_config:
@@ -224,20 +266,16 @@ volumes:
     name: security_vault_logs
     driver: local
 
-  security_vault_file:
-    name: security_vault_file
+  service_wordpress_core:
+    name: service_wordpress_core
     driver: local
 
-  service_core_wordpress:
-    name: service_core_wordpress
+  service_nextcloud_core:
+    name: service_nextcloud_core
     driver: local
 
-  service_core_nextcloud:
-    name: service_core_nextcloud
-    driver: local
-
-  service_core_jenkins:
-    name: service_core_jenkins
+  service_jenkins_core:
+    name: service_jenkins_core
     driver: local
 
   proxy_nginx_server_blocks:

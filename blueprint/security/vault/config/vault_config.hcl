@@ -1,17 +1,17 @@
 ui = true
 
 listener "tcp" {
-  address = "0.0.0.0:8200"
+  address         = "0.0.0.0:8200"
+  cluster_address = "0.0.0.0:8201"
+  tls_disable     = true
 }
 
-storage "mysql" {
-  address  = "database_mysql:3306"
-  database = "vault"
-  username = "vault"
-  password = "test7355608"
+storage "postgresql" {
+  connection_url = "postgresql://postgres_user:postgres_password@security_postgresql:5432/vault?sslmode=disable"
+  table          = "vault_kv_store"
+  ha_enabled     = true
+  ha_table       = "vault_ha_locks"
 }
 
-telemetry {
-  statsite_address = "0.0.0.0:8125"
-  disable_hostname = true
-}
+api_addr     = "https://0.0.0.0:8200"
+cluster_addr = "https://0.0.0.0:8201"
